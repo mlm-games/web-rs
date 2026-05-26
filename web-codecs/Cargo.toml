@@ -1,15 +1,14 @@
 [package]
 name = "web-codecs"
 description = "WASM bindings for Web Codecs"
-authors = ["Luke Curley"]
-repository = "https://github.com/kixelated/web-rs"
-license = "MIT OR Apache-2.0"
-
 version = "0.3.10"
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
 
 categories = ["wasm", "multimedia", "web-programming", "api-bindings"]
-rust-version = "1.85"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "web_sys_unstable_apis"]

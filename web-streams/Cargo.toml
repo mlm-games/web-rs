@@ -1,12 +1,12 @@
 [package]
 name = "web-streams"
 description = "WASM bindings for the Streams API"
-authors = ["Luke Curley"]
-repository = "https://github.com/kixelated/web-rs"
-license = "MIT OR Apache-2.0"
-
 version = "0.1.4"
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
 
 categories = ["wasm", "web-programming", "api-bindings"]
 

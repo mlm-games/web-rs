@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use tokio::sync::{mpsc, watch};
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::{JsCast, prelude::*};
 
 use crate::{EncodedFrame, Error};
 

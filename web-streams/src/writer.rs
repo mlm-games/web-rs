@@ -125,6 +125,7 @@ impl<T: JsCast> TypedWriter<T> {
 #[cfg(feature = "tokio")]
 mod tokio_impl {
 	use super::*;
+	use ErrorKind::{BrokenPipe, Other};
 	use std::future::Future;
 	use std::io::Result;
 	use std::io::{Error, ErrorKind};
@@ -133,7 +134,6 @@ mod tokio_impl {
 	use std::task::{Context, Poll};
 	use tokio::io::AsyncWrite;
 	use web_sys::js_sys::Uint8Array;
-	use ErrorKind::{BrokenPipe, Other};
 
 	impl AsyncWrite for TypedWriter<Uint8Array> {
 		fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {

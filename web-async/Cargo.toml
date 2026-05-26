@@ -1,12 +1,12 @@
 [package]
 name = "web-async"
 description = "Async helpers and utilities for WASM"
-authors = ["Luke Curley"]
-repository = "https://github.com/kixelated/web-rs"
-license = "MIT OR Apache-2.0"
-
 version = "0.1.3"
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+rust-version.workspace = true
 
 keywords = ["wasm", "async", "futures"]
 categories = ["wasm"]

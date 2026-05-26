@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use js_sys::Reflect;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys, ReadableStream, ReadableStreamDefaultReader, ReadableStreamReadResult};
+use web_sys::{ReadableStream, ReadableStreamDefaultReader, ReadableStreamReadResult, js_sys};
 
 use crate::{Error, PromiseExt};
 
@@ -69,6 +69,8 @@ impl<T: JsCast> Drop for Reader<T> {
 mod tokio_impl {
 	use super::*;
 	use crate::reader::js_sys::Uint8Array;
+	use ErrorKind::Other;
+	use Poll::{Pending, Ready};
 	use js_sys::Promise;
 	use std::future::Future;
 	use std::io::Result;
@@ -76,8 +78,6 @@ mod tokio_impl {
 	use std::pin::Pin;
 	use std::task::{Context, Poll};
 	use tokio::io::{AsyncRead, ReadBuf};
-	use ErrorKind::Other;
-	use Poll::{Pending, Ready};
 
 	impl AsyncRead for Reader<Uint8Array> {
 		fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<Result<()>> {

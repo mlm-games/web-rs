@@ -1,6 +1,6 @@
 use bytes::{Bytes, BytesMut};
 use tokio::sync::{mpsc, watch};
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::{JsCast, prelude::*};
 
 use super::{Dimensions, VideoColorSpaceConfig, VideoFrame};
 use crate::{EncodedFrame, Error};
