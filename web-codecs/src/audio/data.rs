@@ -171,7 +171,9 @@ pub trait AudioAppend {
 impl AudioAppend for Vec<f32> {
 	fn append_to(&mut self, data: &AudioData, channel: usize, options: AudioCopyOptions) -> Result<()> {
 		// TODO do unsafe stuff to avoid zeroing the buffer.
-		let grow = options.count.unwrap_or(data.number_of_frames() as _) - options.offset;
+		let frame_count = data.number_of_frames() as usize;
+		let count = options.count.unwrap_or(frame_count);
+		let grow = count.saturating_sub(options.offset);
 		let offset = self.len();
 		self.resize(offset + grow, 0.0);
 

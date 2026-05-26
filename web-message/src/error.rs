@@ -3,8 +3,8 @@ pub enum Error {
 	#[error("missing '{0}' field")]
 	MissingField(&'static str),
 
-	#[error("invalid '{0}' field")]
-	InvalidField(&'static str),
+	#[error("invalid '{0}' field: {1}")]
+	InvalidField(&'static str, String),
 
 	#[error("unexpected length")]
 	UnexpectedLength,

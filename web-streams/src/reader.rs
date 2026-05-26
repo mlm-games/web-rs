@@ -116,7 +116,7 @@ mod tokio_impl {
 					if len < array_len {
 						let leftover = array.slice(len as u32, array_len as u32);
 						result.set_done(false);
-						result.set_value(&**leftover);
+						result.set_value(&leftover);
 						let promise = Promise::resolve(&**result);
 						self.read = Some(JsFuture::from(promise));
 					}

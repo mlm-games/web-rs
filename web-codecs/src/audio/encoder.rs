@@ -106,7 +106,7 @@ impl AudioEncoder {
 		}) as Box<dyn FnMut(_, _)>);
 
 		let init = web_sys::AudioEncoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
-		let inner: web_sys::AudioEncoder = web_sys::AudioEncoder::new(&init).unwrap();
+		let inner: web_sys::AudioEncoder = web_sys::AudioEncoder::new(&init)?;
 		inner.configure(&(&config).into())?;
 
 		Ok(Self {
@@ -157,11 +157,16 @@ impl AudioEncoded {
 		Self { config, frames, closed }
 	}
 
-	pub async fn frame(&mut self) -> Result<Option<EncodedFrame>, Error> {
+	pub async fn next(&mut self) -> Result<Option<EncodedFrame>, Error> {
 		tokio::select! {
 			biased;
 			frame = self.frames.recv() => Ok(frame),
-			Ok(()) = self.closed.changed() => Err(self.closed.borrow().clone().err().unwrap()),
+			result = self.closed.changed() => {
+				match result {
+					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
+					Err(_) => Err(Error::Dropped),
+				}
+			}
 		}
 	}
 

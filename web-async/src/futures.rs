@@ -31,7 +31,9 @@ where
 	type Output = Option<Result<T, E>>;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-		// Frankly I have no idea if this is correct; I hate Pin
+		// I agree, Pin sucks
+		// SAFETY: Transpose is a single-field struct and does not implement
+		// Drop, so projecting to the inner field is safe.
 		let future = unsafe { self.map_unchecked_mut(|s| &mut s.future) };
 
 		match future.poll(cx) {
@@ -55,7 +57,8 @@ where
 	type Output = T;
 
 	fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-		// Frankly I have no idea if this is correct; I hate Pin
+		// SAFETY: Cloned is a single-field struct and does not implement
+		// Drop, so projecting to the inner field is safe.
 		let future = unsafe { self.map_unchecked_mut(|s| &mut s.future) };
 
 		match future.poll(cx) {

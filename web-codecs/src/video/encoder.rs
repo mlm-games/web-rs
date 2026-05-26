@@ -204,7 +204,7 @@ impl VideoEncoder {
 		}) as Box<dyn FnMut(_, _)>);
 
 		let init = web_sys::VideoEncoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
-		let inner: web_sys::VideoEncoder = web_sys::VideoEncoder::new(&init).unwrap();
+		let inner: web_sys::VideoEncoder = web_sys::VideoEncoder::new(&init)?;
 		inner.configure(&(&config).into())?;
 
 		Ok(Self {
@@ -228,9 +228,8 @@ impl VideoEncoder {
 			let duration = timestamp - last_keyframe.unwrap_or_default();
 			if duration >= max_gop_duration {
 				o.set_key_frame(true);
+				*last_keyframe = Some(timestamp);
 			}
-
-			*last_keyframe = Some(timestamp);
 		}
 
 		self.inner.encode_with_options(frame, &o)?;
@@ -273,11 +272,16 @@ impl VideoEncoded {
 		Self { config, frames, closed }
 	}
 
-	pub async fn frame(&mut self) -> Result<Option<EncodedFrame>, Error> {
+	pub async fn next(&mut self) -> Result<Option<EncodedFrame>, Error> {
 		tokio::select! {
 			biased;
 			frame = self.frames.recv() => Ok(frame),
-			Ok(()) = self.closed.changed() => Err(self.closed.borrow().clone().err().unwrap()),
+			result = self.closed.changed() => {
+				match result {
+					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
+					Err(_) => Err(Error::Dropped),
+				}
+			}
 		}
 	}
 

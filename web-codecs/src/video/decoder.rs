@@ -78,7 +78,7 @@ impl VideoDecoderConfig {
 		}) as Box<dyn FnMut(_)>);
 
 		let init = web_sys::VideoDecoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
-		let inner: web_sys::VideoDecoder = web_sys::VideoDecoder::new(&init).unwrap();
+		let inner: web_sys::VideoDecoder = web_sys::VideoDecoder::new(&init)?;
 		inner.configure(&(&self).into())?;
 
 		let decoder = VideoDecoder {
@@ -234,7 +234,12 @@ impl VideoDecoded {
 		tokio::select! {
 			biased;
 			frame = self.frames.recv() => Ok(frame),
-			Ok(()) = self.closed.changed() => Err(self.closed.borrow().clone().err().unwrap()),
+			result = self.closed.changed() => {
+				match result {
+					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
+					Err(_) => Err(Error::Dropped),
+				}
+			}
 		}
 	}
 }

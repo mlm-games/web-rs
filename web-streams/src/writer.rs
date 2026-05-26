@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::mem::ManuallyDrop;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{WritableStream, WritableStreamDefaultWriter};
@@ -45,10 +44,12 @@ impl Drop for Writer {
 
 impl<T: JsCast> From<Writer> for TypedWriter<T> {
 	fn from(value: Writer) -> Self {
-		let value: ManuallyDrop<Writer> = ManuallyDrop::new(value);
+		let inner = value.inner.clone();
+		// Forget the original to avoid double release_lock.
+		std::mem::forget(value);
 
 		TypedWriter {
-			inner: value.inner.clone(),
+			inner,
 			write_promise: None,
 			_phantom: PhantomData,
 		}
@@ -68,10 +69,9 @@ impl<T: JsCast> TryFrom<TypedWriter<T>> for Writer {
 		if value.write_promise.is_some() {
 			Err(value)
 		} else {
-			let value: ManuallyDrop<TypedWriter<T>> = ManuallyDrop::new(value);
-			Ok(Writer {
-				inner: value.inner.clone(),
-			})
+			let inner = value.inner.clone();
+			std::mem::forget(value);
+			Ok(Writer { inner })
 		}
 	}
 }

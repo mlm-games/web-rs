@@ -58,7 +58,7 @@ impl AudioDecoderConfig {
 		}) as Box<dyn FnMut(_)>);
 
 		let init = web_sys::AudioDecoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
-		let inner: web_sys::AudioDecoder = web_sys::AudioDecoder::new(&init).unwrap();
+		let inner: web_sys::AudioDecoder = web_sys::AudioDecoder::new(&init)?;
 		inner.configure(&(&self).into())?;
 
 		let decoder = AudioDecoder {
@@ -169,7 +169,12 @@ impl AudioDecoded {
 		tokio::select! {
 			biased;
 			frame = self.frames.recv() => Ok(frame),
-			Ok(()) = self.closed.changed() => Err(self.closed.borrow().clone().err().unwrap()),
+			result = self.closed.changed() => {
+				match result {
+					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
+					Err(_) => Err(Error::Dropped),
+				}
+			}
 		}
 	}
 }

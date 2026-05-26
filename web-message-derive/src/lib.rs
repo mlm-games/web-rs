@@ -23,7 +23,7 @@ fn expand_struct(ident: &syn::Ident, fields: &Fields) -> proc_macro2::TokenStrea
 
 		quote! {
 			#name: ::web_message::Message::from_message(::web_sys::js_sys::Reflect::get(&obj, &#name_str.into()).map_err(|_| ::web_message::Error::MissingField(#name_str))?)
-				.map_err(|_| ::web_message::Error::InvalidField(#name_str))?
+				.map_err(|e| ::web_message::Error::InvalidField(#name_str, format!("{e}")))?
 		}
 	});
 
@@ -70,7 +70,7 @@ fn expand_enum(
 
 					quote! {
 						#name: ::web_message::Message::from_message(::web_sys::js_sys::Reflect::get(&val, &#name_str.into()).map_err(|_| ::web_message::Error::MissingField(#name_str))?)
-							.map_err(|_| ::web_message::Error::InvalidField(#name_str))?
+							.map_err(|e| ::web_message::Error::InvalidField(#name_str, format!("{e}")))?
 					}
 				});
 
@@ -97,7 +97,7 @@ fn expand_enum(
 				let field_assignments = (0..fields_count).map(|i| {
 					quote! {
 						::web_message::Message::from_message(arr.get(#i))
-							.map_err(|_| ::web_message::Error::InvalidField(stringify!(#i)))?
+							.map_err(|e| ::web_message::Error::InvalidField(stringify!(#i), format!("{e}")))?
 					}
 				});
 
