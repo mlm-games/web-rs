@@ -135,66 +135,47 @@ mod tokio_impl {
 	use web_sys::js_sys::Uint8Array;
 	use ErrorKind::{BrokenPipe, Other};
 
-	impl<T: JsCast + Unpin> TypedWriter<T> {
-		fn project(self: Pin<&mut Self>) -> (&mut WritableStreamDefaultWriter, &mut Option<JsFuture>) {
-			let this = self.get_mut();
-			(&mut this.inner, &mut this.write_promise)
-		}
-	}
-
 	impl AsyncWrite for TypedWriter<Uint8Array> {
 		fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
 			let Ok(Some(desired_size)) = self.inner.desired_size() else {
 				return Ready(Err(Error::new(BrokenPipe, "stream is closed")));
 			};
 
-			let (inner, write_promise) = Self::project(self);
+			let this = self.get_mut();
+			let write_promise = &mut this.write_promise;
 
+			// Stream has backpressure and there's an in-flight write: wait for it
 			if desired_size < 1f64 {
-				return if let Some(promise) = write_promise {
+				if let Some(promise) = write_promise {
 					match Pin::new(promise).poll(cx) {
-						Pending => Pending,
-						Ready(Ok(_)) => {
-							*write_promise = None;
-							Ready(Ok(0))
-						}
+						Pending => return Pending,
+						Ready(Ok(_)) => *write_promise = None,
 						Ready(Err(err)) => {
 							*write_promise = None;
-							let msg = err.as_string().unwrap_or_else(|| "unknown error".to_string());
-							Ready(Err(Error::new(Other, msg)))
+							let msg = err.as_string().unwrap_or_else(|| format!("{:?}", err));
+							return Ready(Err(Error::new(Other, msg)));
 						}
 					}
-				} else {
-					Ready(Ok(0))
-				};
-			}
-
-			if let Some(promise) = write_promise {
-				if let Ready(Err(err)) = Pin::new(promise).poll(cx) {
-					*write_promise = None;
-					let msg = err.as_string().unwrap_or_else(|| "unknown error".to_string());
-					return Ready(Err(Error::new(Other, msg)));
 				}
 			}
 
 			let array = Uint8Array::from(buf);
-			let p = JsFuture::from(inner.write_with_chunk(&array));
-			*write_promise = Some(p);
+			*write_promise = Some(JsFuture::from(this.inner.write_with_chunk(&array)));
 			Ready(Ok(buf.len()))
 		}
 
 		fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-			let (_, write_promise) = Self::project(self);
-			if let Some(promise) = write_promise {
+			let this = self.get_mut();
+			if let Some(promise) = &mut this.write_promise {
 				match Pin::new(promise).poll(cx) {
 					Pending => Pending,
 					Ready(Ok(_)) => {
-						*write_promise = None;
+						this.write_promise = None;
 						Ready(Ok(()))
 					}
 					Ready(Err(err)) => {
-						*write_promise = None;
-						let msg = err.as_string().unwrap_or_else(|| "unknown error".to_string());
+						this.write_promise = None;
+						let msg = err.as_string().unwrap_or_else(|| format!("{:?}", err));
 						Ready(Err(Error::new(Other, msg)))
 					}
 				}
@@ -204,14 +185,14 @@ mod tokio_impl {
 		}
 
 		fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-			let (inner, _) = Self::project(self);
-			inner.close().ignore();
-			let mut js_future = JsFuture::from(inner.closed());
+			let this = self.get_mut();
+			this.inner.close().ignore();
+			let mut js_future = JsFuture::from(this.inner.closed());
 			match Pin::new(&mut js_future).poll(cx) {
 				Pending => Pending,
 				Ready(Ok(_)) => Ready(Ok(())),
 				Ready(Err(err)) => {
-					let msg = err.as_string().unwrap_or_else(|| "unknown error".to_string());
+					let msg = err.as_string().unwrap_or_else(|| format!("{:?}", err));
 					Ready(Err(Error::new(Other, msg)))
 				}
 			}

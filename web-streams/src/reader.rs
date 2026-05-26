@@ -123,9 +123,10 @@ mod tokio_impl {
 
 					Ready(Ok(()))
 				}
-				Ready(Err(_)) => {
+				Ready(Err(err)) => {
 					self.read.take();
-					Ready(Err(Error::new(Other, "js read error")))
+					let msg = format!("{:?}", err);
+					Ready(Err(Error::new(Other, msg)))
 				}
 			}
 		}
