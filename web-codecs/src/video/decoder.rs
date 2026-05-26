@@ -1,5 +1,6 @@
 use bytes::{Bytes, BytesMut};
 use tokio::sync::{mpsc, watch};
+use tokio::sync::mpsc::error::TryRecvError;
 use wasm_bindgen::{JsCast, prelude::*};
 
 use super::{Dimensions, VideoColorSpaceConfig, VideoFrame};
@@ -238,6 +239,22 @@ impl VideoDecoded {
 				match result {
 					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
 					Err(_) => Err(Error::Dropped),
+				}
+			}
+		}
+	}
+
+	/// Synchronously check if a decoded frame is available.
+	/// Returns `Ok(None)` if no frame is ready yet.
+	pub fn try_recv(&mut self) -> Result<Option<VideoFrame>, Error> {
+		match self.frames.try_recv() {
+			Ok(frame) => Ok(Some(frame)),
+			Err(TryRecvError::Empty) => Ok(None),
+			Err(TryRecvError::Disconnected) => {
+				if let Some(e) = self.closed.borrow().as_ref().err() {
+					Err(e.clone())
+				} else {
+					Err(Error::Dropped)
 				}
 			}
 		}
