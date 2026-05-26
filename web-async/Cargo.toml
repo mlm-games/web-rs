@@ -15,10 +15,10 @@ categories = ["wasm"]
 tracing = ["dep:tracing"]
 
 [dependencies]
-tracing = { version = "0.1", optional = true }
+tracing = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.52", features = ["rt"] }
+tokio = { workspace = true, features = ["rt"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures = { workspace = true }
