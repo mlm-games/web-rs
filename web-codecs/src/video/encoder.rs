@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use tokio::sync::{mpsc, watch};
+use tokio::sync::mpsc::error::TryRecvError;
 use wasm_bindgen::{JsCast, prelude::*};
 
 use crate::{EncodedFrame, Error, Timestamp};
@@ -280,6 +281,22 @@ impl VideoEncoded {
 				match result {
 					Ok(()) => Err(self.closed.borrow().clone().err().unwrap_or(Error::Dropped)),
 					Err(_) => Err(Error::Dropped),
+				}
+			}
+		}
+	}
+
+	/// Synchronously check if an encoded frame is available.
+	/// Returns `Ok(None)` if no frame is ready yet.
+	pub fn try_recv(&mut self) -> Result<Option<EncodedFrame>, Error> {
+		match self.frames.try_recv() {
+			Ok(frame) => Ok(Some(frame)),
+			Err(TryRecvError::Empty) => Ok(None),
+			Err(TryRecvError::Disconnected) => {
+				if let Some(e) = self.closed.borrow().as_ref().err() {
+					Err(e.clone())
+				} else {
+					Err(Error::Dropped)
 				}
 			}
 		}
