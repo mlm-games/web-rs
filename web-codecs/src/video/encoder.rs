@@ -217,6 +217,11 @@ impl VideoEncoder {
 		})
 	}
 
+	pub fn reconfigure(&mut self) -> Result<(), Error> {
+		self.inner.configure(&(&self.config).into())?;
+		Ok(())
+	}
+
 	pub fn encode(&mut self, frame: &VideoFrame, options: VideoEncodeOptions) -> Result<(), Error> {
 		let o = web_sys::VideoEncoderEncodeOptions::new();
 
