@@ -43,6 +43,7 @@ features = [
     "VideoTransferCharacteristics",
     "VideoEncoder",
     "VideoEncoderInit",
+    "CodecState",
     "VideoEncoderConfig",
     "VideoEncoderEncodeOptions",
     "VideoEncoderSupport",

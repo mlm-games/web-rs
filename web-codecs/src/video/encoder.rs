@@ -218,8 +218,18 @@ impl VideoEncoder {
 	}
 
 	pub fn reconfigure(&mut self) -> Result<(), Error> {
-		self.inner.configure(&(&self.config).into())?;
-		Ok(())
+		let state = self.inner.state();
+		match state {
+			web_sys::CodecState::Configured => Ok(()),
+			web_sys::CodecState::Unconfigured => {
+				self.inner.configure(&(&self.config).into())?;
+				Ok(())
+			}
+			_ => {
+				let msg = format!("encoder state={state:?} at reconfigure");
+				Err(Error::Unknown(wasm_bindgen::JsValue::from_str(&msg)))
+			}
+		}
 	}
 
 	pub fn encode(&mut self, frame: &VideoFrame, options: VideoEncodeOptions) -> Result<(), Error> {
