@@ -4,8 +4,9 @@ use std::{
 };
 
 use derive_more::From;
+use wasm_bindgen_futures::JsFuture;
 
-use crate::Timestamp;
+use crate::{Error, Result, Timestamp};
 
 use super::Dimensions;
 
@@ -26,6 +27,18 @@ impl VideoFrame {
 			width: self.0.coded_width(),
 			height: self.0.coded_height(),
 		}
+	}
+
+	/// This calls the WebCodecs [`VideoFrame.copyTo()`] API
+	/// The data is laid out tightly per the frame's [`VideoPixelFormat`]
+	pub async fn copy_to_cpu(&self) -> Result<Vec<u8>> {
+		let size = self.0.allocation_size().map_err(Error::Unknown)? as usize;
+
+		let mut buf = vec![0u8; size];
+		let promise = self.0.copy_to_with_u8_slice(&mut buf);
+		JsFuture::from(promise).await.map_err(Error::Unknown)?;
+
+		Ok(buf)
 	}
 }
 

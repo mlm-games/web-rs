@@ -64,4 +64,5 @@ features = [
     "AudioDataCopyToOptions",
     "AudioDataInit",
     "console",
+    "PlaneLayout",
 ]
