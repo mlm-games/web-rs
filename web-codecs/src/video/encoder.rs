@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-use tokio::sync::{mpsc, watch};
 use tokio::sync::mpsc::error::TryRecvError;
+use tokio::sync::{mpsc, watch};
 use wasm_bindgen::{JsCast, prelude::*};
 
 use crate::{EncodedFrame, Error, Timestamp};
@@ -208,6 +208,17 @@ impl VideoEncoder {
 		let inner: web_sys::VideoEncoder = web_sys::VideoEncoder::new(&init)?;
 		inner.configure(&(&config).into())?;
 
+		let state_after_init = inner.state();
+		match state_after_init {
+			web_sys::CodecState::Configured => {
+				// expected
+			}
+			other => {
+				let msg = format!("encoder state={other:?} after init+configure");
+				return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(&msg)));
+			}
+		}
+
 		Ok(Self {
 			config,
 			inner,
@@ -315,6 +326,11 @@ impl VideoEncoded {
 				}
 			}
 		}
+	}
+
+	/// Returns any pending error from the encoder's error callback.
+	pub fn check_error(&self) -> Option<Error> {
+		self.closed.borrow().as_ref().err().cloned()
 	}
 
 	/// Returns the decoder config, after the first frame has been encoded.
