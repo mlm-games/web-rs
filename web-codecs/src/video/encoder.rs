@@ -92,7 +92,9 @@ impl VideoEncoderConfig {
 
 impl From<&VideoEncoderConfig> for web_sys::VideoEncoderConfig {
 	fn from(this: &VideoEncoderConfig) -> Self {
-		let config = web_sys::VideoEncoderConfig::new(&this.codec, this.resolution.height, this.resolution.width);
+		let config = web_sys::VideoEncoderConfig::new(&this.codec);
+		config.set_width(this.resolution.width);
+		config.set_height(this.resolution.height);
 
 		if let Some(Dimensions { width, height }) = this.display {
 			config.set_display_height(height);
