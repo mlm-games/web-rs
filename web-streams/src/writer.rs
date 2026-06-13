@@ -136,6 +136,9 @@ mod tokio_impl {
 	use web_sys::js_sys::Uint8Array;
 
 	impl AsyncWrite for TypedWriter<Uint8Array> {
+		/// NOTE: `poll_write` acknowledges the write immediately after kicking
+		/// off the underlying JS promise. Errors are surfaced on subsequent
+		/// `poll_write`/`poll_flush` calls.
 		fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
 			let Ok(Some(desired_size)) = self.inner.desired_size() else {
 				return Ready(Err(Error::new(BrokenPipe, "stream is closed")));

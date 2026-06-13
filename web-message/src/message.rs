@@ -70,7 +70,7 @@ impl<T: Message> Message for Option<T> {
 	}
 
 	fn from_message(message: JsValue) -> Result<Self, Error> {
-		Ok(match message.is_null() {
+		Ok(match message.is_null() || message.is_undefined() {
 			true => None,
 			false => Some(T::from_message(message)?),
 		})

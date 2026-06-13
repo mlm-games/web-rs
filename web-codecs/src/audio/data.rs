@@ -36,7 +36,7 @@ impl AudioData {
 			// Copy the other channels using a Float32Array as a view into the buffer.
 			let slice = js_sys::Float32Array::new_with_byte_offset_and_length(
 				&data.buffer(),
-				(i * frame_count) as u32,
+				(i * frame_count * 4) as u32,
 				frame_count as _,
 			);
 			slice.copy_from(channel);
@@ -129,7 +129,7 @@ pub trait AudioCopy {
 impl AudioCopy for [u8] {
 	fn copy_to(&mut self, data: &AudioData, channel: usize, options: AudioCopyOptions) -> Result<()> {
 		let options = options.into_web_sys(channel);
-		// NOTE: The format is unuset so it will default to the AudioData format.
+		// NOTE: The format is unset so it will default to the AudioData format.
 		// This means you couldn't export as U8Planar for whatever that's worth...
 		data.0.as_ref().unwrap().copy_to_with_u8_slice(self, &options)?;
 		Ok(())
@@ -187,8 +187,12 @@ impl AudioAppend for Vec<f32> {
 
 #[derive(Debug, Default)]
 pub struct AudioCopyOptions {
-	pub offset: usize,        // defaults to 0
-	pub count: Option<usize>, // defaults to remainder
+	/// The frame offset to start copying from. Defaults to 0.
+	pub offset: usize,
+	/// The number of frames to copy. When `Some`, this is the total frames
+	/// starting from `offset`. When `None`, copies all remaining frames
+	/// (from `offset` to the end of the data).
+	pub count: Option<usize>,
 }
 
 impl AudioCopyOptions {

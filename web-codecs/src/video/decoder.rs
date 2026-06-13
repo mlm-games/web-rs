@@ -46,11 +46,11 @@ impl VideoDecoderConfig {
 	/// Check if the configuration is supported by this browser.
 	/// Returns an error if the configuration is invalid, and false if just unsupported.
 	pub async fn is_supported(&self) -> Result<bool, Error> {
-		if self.resolution.is_none_or(|d| d.width == 0 || d.height == 0) {
+		if self.resolution.is_some_and(|d| d.width == 0 || d.height == 0) {
 			return Err(Error::InvalidDimensions);
 		}
 
-		if self.display.is_none_or(|d| d.width == 0 || d.height == 0) {
+		if self.display.is_some_and(|d| d.width == 0 || d.height == 0) {
 			return Err(Error::InvalidDimensions);
 		}
 
