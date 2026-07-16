@@ -1,3 +1,5 @@
+use std::mem::ManuallyDrop;
+
 use bytes::{Bytes, BytesMut};
 use tokio::sync::{mpsc, watch};
 use tokio::sync::mpsc::error::TryRecvError;
@@ -65,22 +67,31 @@ impl VideoDecoderConfig {
 		let (closed_tx, closed_rx) = watch::channel(Ok(()));
 		let closed_tx2 = closed_tx.clone();
 
-		let on_error = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_error = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			closed_tx.send_replace(Err(Error::from(e))).ok();
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
-		let on_frame = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_frame = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			let frame: web_sys::VideoFrame = e.unchecked_into();
 			let frame = VideoFrame::from(frame);
 
 			if frames_tx.send(frame).is_err() {
 				closed_tx2.send_replace(Err(Error::Dropped)).ok();
 			}
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
 		let init = web_sys::VideoDecoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
 		let inner: web_sys::VideoDecoder = web_sys::VideoDecoder::new(&init)?;
 		inner.configure(&(&self).into())?;
+
+		if let Err(e) = closed_rx.borrow().as_ref() {
+			return Err(e.clone());
+		}
+		if inner.state() != web_sys::CodecState::Configured {
+			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(
+				&format!("decoder state={:?} after configure()", inner.state()),
+			)));
+		}
 
 		let decoder = VideoDecoder {
 			inner,
@@ -183,11 +194,8 @@ impl From<web_sys::VideoDecoderConfig> for VideoDecoderConfig {
 pub struct VideoDecoder {
 	inner: web_sys::VideoDecoder,
 
-	// These are held to avoid dropping them.
-	#[allow(dead_code)]
-	on_error: Closure<dyn FnMut(JsValue)>,
-	#[allow(dead_code)]
-	on_frame: Closure<dyn FnMut(JsValue)>,
+	on_error: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
+	on_frame: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
 }
 
 impl VideoDecoder {
@@ -204,7 +212,16 @@ impl VideoDecoder {
 		);
 
 		let chunk = web_sys::EncodedVideoChunk::new(&chunk)?;
-		self.inner.decode(&chunk)?;
+		let state_before = self.inner.state();
+		let result = self.inner.decode(&chunk);
+		let state_after = self.inner.state();
+
+		if let Err(e) = result {
+			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(
+				&format!("decode error (state before={:?} after={:?}): {:?}",
+					state_before, state_after, e),
+			)));
+		}
 
 		Ok(())
 	}
@@ -221,7 +238,6 @@ impl VideoDecoder {
 
 impl Drop for VideoDecoder {
 	fn drop(&mut self) {
-		let _ = self.inner.close();
 	}
 }
 
@@ -246,10 +262,18 @@ impl VideoDecoded {
 
 	/// Synchronously check if a decoded frame is available.
 	/// Returns `Ok(None)` if no frame is ready yet.
+	/// Returns `Err(e)` if the decoder has encountered an error (even if the
+	/// frames channel is still connected
 	pub fn try_recv(&mut self) -> Result<Option<VideoFrame>, Error> {
 		match self.frames.try_recv() {
 			Ok(frame) => Ok(Some(frame)),
-			Err(TryRecvError::Empty) => Ok(None),
+			Err(TryRecvError::Empty) => {
+				if let Some(e) = self.closed.borrow().as_ref().err() {
+					Err(e.clone())
+				} else {
+					Ok(None)
+				}
+			}
 			Err(TryRecvError::Disconnected) => {
 				if let Some(e) = self.closed.borrow().as_ref().err() {
 					Err(e.clone())

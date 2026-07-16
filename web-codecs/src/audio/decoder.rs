@@ -1,3 +1,5 @@
+use std::mem::ManuallyDrop;
+
 use bytes::{Bytes, BytesMut};
 use tokio::sync::{mpsc, watch};
 use wasm_bindgen::{JsCast, prelude::*};
@@ -44,18 +46,18 @@ impl AudioDecoderConfig {
 		let (closed_tx, closed_rx) = watch::channel(Ok(()));
 		let closed_tx2 = closed_tx.clone();
 
-		let on_error = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_error = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			closed_tx.send_replace(Err(Error::from(e))).ok();
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
-		let on_frame = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_frame = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			let frame: web_sys::AudioData = e.unchecked_into();
 			let frame = AudioData::from(frame);
 
 			if frames_tx.send(frame).is_err() {
 				closed_tx2.send_replace(Err(Error::Dropped)).ok();
 			}
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
 		let init = web_sys::AudioDecoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
 		let inner: web_sys::AudioDecoder = web_sys::AudioDecoder::new(&init)?;
@@ -117,11 +119,8 @@ impl From<web_sys::AudioDecoderConfig> for AudioDecoderConfig {
 pub struct AudioDecoder {
 	inner: web_sys::AudioDecoder,
 
-	// These are held to avoid dropping them.
-	#[allow(dead_code)]
-	on_error: Closure<dyn FnMut(JsValue)>,
-	#[allow(dead_code)]
-	on_frame: Closure<dyn FnMut(JsValue)>,
+	on_error: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
+	on_frame: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
 }
 
 impl AudioDecoder {
@@ -155,7 +154,7 @@ impl AudioDecoder {
 
 impl Drop for AudioDecoder {
 	fn drop(&mut self) {
-		let _ = self.inner.close();
+		// the browser may still be firing pending callbacks asynchronously after close().
 	}
 }
 

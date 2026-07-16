@@ -1,5 +1,6 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc, time::Duration};
 
+use js_sys;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::{mpsc, watch};
 use wasm_bindgen::{JsCast, prelude::*};
@@ -41,30 +42,31 @@ pub struct VideoEncoderConfig {
 	pub scalability_mode: Option<String>,
 	pub bitrate_mode: Option<VideoBitrateMode>,
 
-	pub avc_bitstream_format: Option<AvcBitstreamFormat>,
-
 	// NOTE: This is a custom configuration
 	/// The maximum duration of a Group of Pictures (GOP) before forcing a new keyframe.
 	pub max_gop_duration: Option<Duration>, // seconds
+
+	/// Only applies to H.264.
+	pub avc_bitstream_format: Option<AvcBitstreamFormat>,
 }
 
 impl VideoEncoderConfig {
-	pub fn new<T: Into<String>>(codec: T, resolution: Dimensions) -> Self {
-		Self {
-			codec: codec.into(),
-			resolution,
-			display: None,
-			hardware_acceleration: None,
-			latency_optimized: None,
-			avc_bitstream_format: None,
-			bitrate: None,
-			framerate: None,
-			alpha_preserved: None,
-			scalability_mode: None,
-			bitrate_mode: None,
-			max_gop_duration: None,
+		pub fn new<T: Into<String>>(codec: T, resolution: Dimensions) -> Self {
+			Self {
+				codec: codec.into(),
+				resolution,
+				display: None,
+				hardware_acceleration: None,
+				latency_optimized: None,
+				bitrate: None,
+				framerate: None,
+				alpha_preserved: None,
+				scalability_mode: None,
+				bitrate_mode: None,
+				max_gop_duration: None,
+				avc_bitstream_format: None,
+			}
 		}
-	}
 
 	pub async fn is_supported(&self) -> Result<bool, Error> {
 		let res =
@@ -145,6 +147,21 @@ impl From<&VideoEncoderConfig> for web_sys::VideoEncoderConfig {
 			// TODO not supported yet
 		}
 
+		if let Some(fmt) = &this.avc_bitstream_format {
+			let avc_obj = js_sys::Object::new();
+			let format_str = match fmt {
+				AvcBitstreamFormat::AnnexB => "annexb",
+				AvcBitstreamFormat::Avc => "avc",
+			};
+			js_sys::Reflect::set(
+				&avc_obj,
+				&"format".into(),
+				&wasm_bindgen::JsValue::from_str(format_str),
+			)
+			.ok();
+			js_sys::Reflect::set(&config, &"avc".into(), &avc_obj).ok();
+		}
+
 		config
 	}
 }
@@ -163,11 +180,9 @@ pub struct VideoEncoder {
 
 	last_keyframe: Rc<RefCell<Option<Timestamp>>>,
 
-	// These are held to avoid dropping them.
-	#[allow(dead_code)]
-	on_error: Closure<dyn FnMut(JsValue)>,
-	#[allow(dead_code)]
-	on_frame: Closure<dyn FnMut(JsValue, JsValue)>,
+	
+	on_error: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
+	on_frame: ManuallyDrop<Closure<dyn FnMut(JsValue, JsValue)>>,
 }
 
 impl VideoEncoder {
@@ -181,11 +196,11 @@ impl VideoEncoder {
 		let last_keyframe2 = last_keyframe.clone();
 
 		let on_error2 = on_error.clone();
-		let on_error = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_error = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			on_error.send_replace(Err(Error::from(e))).ok();
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
-		let on_frame = Closure::wrap(Box::new(move |frame: JsValue, meta: JsValue| {
+		let on_frame = ManuallyDrop::new(Closure::wrap(Box::new(move |frame: JsValue, meta: JsValue| {
 			// First parameter is the frame, second optional parameter is metadata.
 			let frame: web_sys::EncodedVideoChunk = frame.unchecked_into();
 			let frame = EncodedFrame::from(frame);
@@ -211,7 +226,7 @@ impl VideoEncoder {
 			if on_frame.send(frame).is_err() {
 				on_error2.send_replace(Err(Error::Dropped)).ok();
 			}
-		}) as Box<dyn FnMut(_, _)>);
+		}) as Box<dyn FnMut(_, _)>));
 
 		let init = web_sys::VideoEncoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
 		let inner: web_sys::VideoEncoder = web_sys::VideoEncoder::new(&init)?;
@@ -286,14 +301,18 @@ impl VideoEncoder {
 		Ok(())
 	}
 
+	/// Start an async flush without waiting. Returns the JS Promise so the
+	/// caller can track completion (e.g. via spawn_local). The encoder's
+	/// output callback will fire for each buffered frame when the flush
+	/// completes, placing them in the output channel for subsequent
+	/// `try_recv()` calls.
 	pub fn start_flush(&mut self) -> js_sys::Promise {
-		self.inner.flush().unchecked_into::<js_sys::Promise>()
+		wasm_bindgen::JsCast::unchecked_into::<js_sys::Promise>(self.inner.flush())
 	}
 }
 
 impl Drop for VideoEncoder {
 	fn drop(&mut self) {
-		let _ = self.inner.close();
 	}
 }
 

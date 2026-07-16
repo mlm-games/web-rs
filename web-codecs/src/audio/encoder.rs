@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
 use tokio::sync::{mpsc, watch};
 use wasm_bindgen::{JsCast, prelude::*};
@@ -65,11 +65,8 @@ pub struct AudioEncoder {
 	inner: web_sys::AudioEncoder,
 	config: AudioEncoderConfig,
 
-	// These are held to avoid dropping them.
-	#[allow(dead_code)]
-	on_error: Closure<dyn FnMut(JsValue)>,
-	#[allow(dead_code)]
-	on_frame: Closure<dyn FnMut(JsValue, JsValue)>,
+	on_error: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
+	on_frame: ManuallyDrop<Closure<dyn FnMut(JsValue, JsValue)>>,
 }
 
 impl AudioEncoder {
@@ -80,11 +77,11 @@ impl AudioEncoder {
 		on_error: watch::Sender<Result<(), Error>>,
 	) -> Result<Self, Error> {
 		let on_error2 = on_error.clone();
-		let on_error = Closure::wrap(Box::new(move |e: JsValue| {
+		let on_error = ManuallyDrop::new(Closure::wrap(Box::new(move |e: JsValue| {
 			on_error.send_replace(Err(Error::from(e))).ok();
-		}) as Box<dyn FnMut(_)>);
+		}) as Box<dyn FnMut(_)>));
 
-		let on_frame = Closure::wrap(Box::new(move |frame: JsValue, meta: JsValue| {
+		let on_frame = ManuallyDrop::new(Closure::wrap(Box::new(move |frame: JsValue, meta: JsValue| {
 			// First parameter is the frame, second optional parameter is metadata.
 			let frame: web_sys::EncodedAudioChunk = frame.unchecked_into();
 			let frame = EncodedFrame::from(frame);
