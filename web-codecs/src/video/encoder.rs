@@ -287,7 +287,7 @@ impl VideoEncoder {
 	}
 
 	pub fn start_flush(&mut self) -> js_sys::Promise {
-		self.inner.flush()
+		self.inner.flush().into()
 	}
 }
 
