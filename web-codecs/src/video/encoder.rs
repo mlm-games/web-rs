@@ -10,6 +10,12 @@ use super::{Dimensions, VideoDecoderConfig, VideoFrame};
 
 use derive_more::Display;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AvcBitstreamFormat {
+    AnnexB,
+    Avc,
+}
+
 #[derive(Debug, Display, Clone, Copy)]
 pub enum VideoBitrateMode {
 	#[display("constant")]
@@ -35,6 +41,8 @@ pub struct VideoEncoderConfig {
 	pub scalability_mode: Option<String>,
 	pub bitrate_mode: Option<VideoBitrateMode>,
 
+	pub avc_bitstream_format: Option<AvcBitstreamFormat>,
+
 	// NOTE: This is a custom configuration
 	/// The maximum duration of a Group of Pictures (GOP) before forcing a new keyframe.
 	pub max_gop_duration: Option<Duration>, // seconds
@@ -48,6 +56,7 @@ impl VideoEncoderConfig {
 			display: None,
 			hardware_acceleration: None,
 			latency_optimized: None,
+			avc_bitstream_format: None,
 			bitrate: None,
 			framerate: None,
 			alpha_preserved: None,
@@ -275,6 +284,10 @@ impl VideoEncoder {
 	pub async fn flush(&mut self) -> Result<(), Error> {
 		wasm_bindgen_futures::JsFuture::from(self.inner.flush()).await?;
 		Ok(())
+	}
+
+	pub fn start_flush(&mut self) -> js_sys::Promise {
+		self.inner.flush()
 	}
 }
 
