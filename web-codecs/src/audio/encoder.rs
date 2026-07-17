@@ -100,7 +100,7 @@ impl AudioEncoder {
 			if on_frame.send(frame).is_err() {
 				on_error2.send_replace(Err(Error::Dropped)).ok();
 			}
-		}) as Box<dyn FnMut(_, _)>);
+		}) as Box<dyn FnMut(_, _)>));
 
 		let init = web_sys::AudioEncoderInit::new(on_error.as_ref().unchecked_ref(), on_frame.as_ref().unchecked_ref());
 		let inner: web_sys::AudioEncoder = web_sys::AudioEncoder::new(&init)?;
