@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["web-codecs", "web-message", "web-message-derive"]
+members = ["web-codecs"]
 
 [workspace.package]
 edition = "2024"
@@ -14,15 +14,9 @@ bytemuck = "1.25"
 bytes = "1.11"
 derive_more = { version = "2.1", features = ["from", "display"] }
 js-sys = "0.3"
-proc-macro2 = "1"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
 thiserror = "2.0"
 tokio = "1.52"
-url = "2.5"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.102"
 web-workers = { version = "0.3", features = ["message"] }
-
-web-message-derive = { path = "web-message-derive" }
