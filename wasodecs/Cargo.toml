@@ -1,6 +1,6 @@
 [package]
-name = "web-codecs"
-description = "WASM bindings for Web Codecs"
+name = "wasodecs"
+description = "WASM bindings for WebCodecs"
 version = "0.3.10"
 edition.workspace = true
 authors.workspace = true

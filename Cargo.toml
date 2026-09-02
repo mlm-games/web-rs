@@ -1,11 +1,11 @@
 [workspace]
 resolver = "3"
-members = ["web-codecs"]
+members = ["wasodecs"]
 
 [workspace.package]
 edition = "2024"
-authors = ["Luke Curley"]
-repository = "https://github.com/kixelated/web-rs"
+authors =  ["mlm-games"] # Old: ["Luke Curley"]
+repository = "https://github.com/mlm-games/web-rs"
 license = "MIT OR Apache-2.0"
 rust-version = "1.85"
 
