@@ -13,6 +13,8 @@ categories = ["wasm", "web-programming"]
 [features]
 default = ["derive"]
 derive = ["dep:web-message-derive"]
+# Enables web-workers thread/sync/time polyfill alongside this crate (name is wider than workers)
+workers = ["dep:web-workers"]
 
 # These features implement the Message interface for popular crates:
 Url = ["dep:url"]
@@ -39,3 +41,4 @@ thiserror = { workspace = true }
 url = { workspace = true, optional = true }
 web-message-derive = { workspace = true, optional = true }
 web-sys = { workspace = true }
+web-workers = { workspace = true, optional = true }

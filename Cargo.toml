@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["web-async", "web-codecs", "web-message", "web-message-derive", "web-streams"]
+members = ["web-codecs", "web-message", "web-message-derive"]
 
 [workspace.package]
 edition = "2024"
@@ -19,10 +19,10 @@ quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
 thiserror = "2.0"
 tokio = "1.52"
-tracing = "0.1"
 url = "2.5"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.102"
+web-workers = { version = "0.3", features = ["message"] }
 
 web-message-derive = { path = "web-message-derive" }
