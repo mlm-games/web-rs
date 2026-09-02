@@ -4,6 +4,11 @@
 //! Unlike using Serde for JSON encoding, this approach preserves [Transferable Objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects) and can avoid expensive allocations and copying.
 //! Unlike using #[wasm-bindgen], this approach works outside of the `wasm-bindgen` ABI, supporting more types (ex. named enum variants).
 //!
+//! **Maintenance note:** For most `postMessage` use-cases prefer [`serde-wasm-bindgen`](https://crates.io/crates/serde-wasm-bindgen)
+//! (`0.6`, official `wasm-bindgen` integration) with `#[derive(serde::Serialize, Deserialize)]`. It is smaller/faster than JSON
+//! and is the canonical choice for `JsValue` ↔ Rust conversion.
+//! This crate (`web-message`) exists only for the **transferable zero-copy** path (`ArrayBuffer`/`VideoFrame`/`MessagePort` etc. via the second `transfer` arg of `postMessage`) which `serde-wasm-bindgen` does not handle. If you do not need zero-copy transfers, use `serde-wasm-bindgen`.
+//!
 //! For example, the main thread can send a [js_sys::ArrayBuffer] or a Web Worker without copying the data.
 //! If the WASM worker only needs to process a few header bytes, it can use the [js_sys::ArrayBuffer] instead of copying into a [Vec<u8>].
 //! The resulting bytes can then be passed to [VideoDecoder](https://developer.mozilla.org/en-US/docs/Web/API/VideoDecoder) and the resulting [VideoFrame](https://developer.mozilla.org/en-US/docs/Web/API/VideoFrame) (transferable) can be posted back to the main thread.
