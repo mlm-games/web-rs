@@ -3,8 +3,9 @@ resolver = "3"
 members = ["wasodecs"]
 
 [workspace.package]
+version = "0.3.11"
 edition = "2024"
-authors =  ["mlm-games"] # Old: ["Luke Curley"]
+authors = ["mlm-games"] # Old: ["Luke Curley"]
 repository = "https://github.com/mlm-games/web-rs"
 license = "MIT OR Apache-2.0"
 rust-version = "1.85"
