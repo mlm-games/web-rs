@@ -1,6 +1,6 @@
 # web-rs
 
-Single-crate workspace for [`wasodecs`](./wasodecs) — a channel-based wrapper around the [WebCodecs API](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API). No well-maintained external alternative exists.
+Single-crate workspace for [`wasodecs`](./wasodecs), which is a channel-based wrapper around the [WebCodecs API](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API).
 
 Threading and `postMessage` transfers are out of scope here; use [`web-workers`](https://crates.io/crates/web-workers) (`features = ["message"]`) instead.
 
