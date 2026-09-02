@@ -1,8 +1,8 @@
 use std::mem::ManuallyDrop;
 
 use bytes::{Bytes, BytesMut};
-use tokio::sync::{mpsc, watch};
 use tokio::sync::mpsc::error::TryRecvError;
+use tokio::sync::{mpsc, watch};
 use wasm_bindgen::{JsCast, prelude::*};
 
 use super::{Dimensions, VideoColorSpaceConfig, VideoFrame};
@@ -88,9 +88,10 @@ impl VideoDecoderConfig {
 			return Err(e.clone());
 		}
 		if inner.state() != web_sys::CodecState::Configured {
-			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(
-				&format!("decoder state={:?} after configure()", inner.state()),
-			)));
+			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(&format!(
+				"decoder state={:?} after configure()",
+				inner.state()
+			))));
 		}
 
 		let decoder = VideoDecoder {
@@ -217,10 +218,10 @@ impl VideoDecoder {
 		let state_after = self.inner.state();
 
 		if let Err(e) = result {
-			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(
-				&format!("decode error (state before={:?} after={:?}): {:?}",
-					state_before, state_after, e),
-			)));
+			return Err(Error::Unknown(wasm_bindgen::JsValue::from_str(&format!(
+				"decode error (state before={:?} after={:?}): {:?}",
+				state_before, state_after, e
+			))));
 		}
 
 		Ok(())
@@ -237,8 +238,7 @@ impl VideoDecoder {
 }
 
 impl Drop for VideoDecoder {
-	fn drop(&mut self) {
-	}
+	fn drop(&mut self) {}
 }
 
 pub struct VideoDecoded {

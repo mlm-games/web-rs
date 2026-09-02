@@ -13,8 +13,8 @@ use derive_more::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AvcBitstreamFormat {
-    AnnexB,
-    Avc,
+	AnnexB,
+	Avc,
 }
 
 #[derive(Debug, Display, Clone, Copy)]
@@ -51,22 +51,22 @@ pub struct VideoEncoderConfig {
 }
 
 impl VideoEncoderConfig {
-		pub fn new<T: Into<String>>(codec: T, resolution: Dimensions) -> Self {
-			Self {
-				codec: codec.into(),
-				resolution,
-				display: None,
-				hardware_acceleration: None,
-				latency_optimized: None,
-				bitrate: None,
-				framerate: None,
-				alpha_preserved: None,
-				scalability_mode: None,
-				bitrate_mode: None,
-				max_gop_duration: None,
-				avc_bitstream_format: None,
-			}
+	pub fn new<T: Into<String>>(codec: T, resolution: Dimensions) -> Self {
+		Self {
+			codec: codec.into(),
+			resolution,
+			display: None,
+			hardware_acceleration: None,
+			latency_optimized: None,
+			bitrate: None,
+			framerate: None,
+			alpha_preserved: None,
+			scalability_mode: None,
+			bitrate_mode: None,
+			max_gop_duration: None,
+			avc_bitstream_format: None,
 		}
+	}
 
 	pub async fn is_supported(&self) -> Result<bool, Error> {
 		let res =
@@ -153,12 +153,7 @@ impl From<&VideoEncoderConfig> for web_sys::VideoEncoderConfig {
 				AvcBitstreamFormat::AnnexB => "annexb",
 				AvcBitstreamFormat::Avc => "avc",
 			};
-			js_sys::Reflect::set(
-				&avc_obj,
-				&"format".into(),
-				&wasm_bindgen::JsValue::from_str(format_str),
-			)
-			.ok();
+			js_sys::Reflect::set(&avc_obj, &"format".into(), &wasm_bindgen::JsValue::from_str(format_str)).ok();
 			js_sys::Reflect::set(&config, &"avc".into(), &avc_obj).ok();
 		}
 
@@ -180,7 +175,6 @@ pub struct VideoEncoder {
 
 	last_keyframe: Rc<RefCell<Option<Timestamp>>>,
 
-	
 	on_error: ManuallyDrop<Closure<dyn FnMut(JsValue)>>,
 	on_frame: ManuallyDrop<Closure<dyn FnMut(JsValue, JsValue)>>,
 }
@@ -312,8 +306,7 @@ impl VideoEncoder {
 }
 
 impl Drop for VideoEncoder {
-	fn drop(&mut self) {
-	}
+	fn drop(&mut self) {}
 }
 
 pub struct VideoEncoded {
