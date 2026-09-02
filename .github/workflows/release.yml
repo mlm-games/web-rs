@@ -1,35 +1,34 @@
-name: release
-
-permissions:
-  pull-requests: write
-  contents: write
-
+name: Release crates
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "Create GitHub Release"
+        required: true
+        default: true
+        type: boolean
+      bump_type:
+        description: "Version bump type (none/patch/minor/major)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - none
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      # Checkout the repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # Install Rust
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          target: wasm32-unknown-unknown
-
-      # Set RUSTFLAGS
-      - run: echo "RUSTFLAGS=--cfg=web_sys_unstable_apis" >> $GITHUB_ENV
-
-      # Run release-plz to create PRs and releases
-      - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    permissions:
+      contents: write
+    uses: mlm-games/ci/.github/workflows/crate-publish.yml@main
+    with:
+      bump-type: ${{ inputs.bump_type }}
+      create-release: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.create_release) }}
+      workspace-publish: true
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
